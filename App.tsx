@@ -1,10 +1,67 @@
+import { useEffect, useState } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import * as Location from 'expo-location';
+import { useLocation } from './hooks/useLocation';
+
+type PermissionStatus = 'loading' | 'granted' | 'denied';
 
 export default function App() {
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('loading');
+  const { location, error: locationError } = useLocation(permissionStatus === 'granted');
+
+  useEffect(() => {
+    (async () => {
+      // Check existing grant first — avoids re-prompting on every launch.
+      const { status: existing } = await Location.getForegroundPermissionsAsync();
+      if (existing === Location.PermissionStatus.GRANTED) {
+        setPermissionStatus('granted');
+        return;
+      }
+      const { status: requested } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(
+        requested === Location.PermissionStatus.GRANTED ? 'granted' : 'denied'
+      );
+    })();
+  }, []);
+
+  if (permissionStatus === 'loading') {
+    return <View style={styles.container}><StatusBar style="auto" /></View>;
+  }
+
+  if (permissionStatus === 'denied') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Location Access Required</Text>
+        <Text style={styles.message}>
+          RunRelief needs access to your location to find public bathrooms nearby.
+          Please enable location access in iOS Settings.
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={() => Linking.openSettings()}>
+          <Text style={styles.buttonText}>Open Settings</Text>
+        </TouchableOpacity>
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+      <Text style={styles.title}>RunRelief</Text>
+      {locationError ? (
+        <Text style={styles.message}>{locationError}</Text>
+      ) : location ? (
+        <>
+          <Text style={styles.coords}>
+            {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
+          </Text>
+          <Text style={styles.accuracy}>
+            ±{Math.round(location.coords.accuracy ?? 0)} m accuracy
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.message}>Acquiring GPS…</Text>
+      )}
       <StatusBar style="auto" />
     </View>
   );
@@ -16,5 +73,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: 15,
+    color: '#555',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  coords: {
+    fontSize: 16,
+    fontFamily: 'monospace' as const,
+    color: '#333',
+    marginBottom: 6,
+  },
+  accuracy: {
+    fontSize: 13,
+    color: '#999',
   },
 });
