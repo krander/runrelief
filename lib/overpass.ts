@@ -1,3 +1,5 @@
+import { parseIsOpen } from './utils';
+
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
 export type Bathroom = {
@@ -20,7 +22,7 @@ export function parseBathroomsFromOSM(elements: OverpassNode[]): Bathroom[] {
       latitude: node.lat,
       longitude: node.lon,
       openingHours,
-      isOpen: null, // full hours parsing deferred to Story 4.5
+      isOpen: openingHours !== null ? parseIsOpen(openingHours) : null,
       source: 'osm',
     };
   });

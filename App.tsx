@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
-import { useLocation } from './hooks/useLocation';
+import FinderScreen from './screens/FinderScreen';
 
 type PermissionStatus = 'loading' | 'granted' | 'denied';
 
 export default function App() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('loading');
-  const { location, error: locationError } = useLocation(permissionStatus === 'granted');
 
   useEffect(() => {
     (async () => {
@@ -45,26 +44,7 @@ export default function App() {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>RunRelief</Text>
-      {locationError ? (
-        <Text style={styles.message}>{locationError}</Text>
-      ) : location ? (
-        <>
-          <Text style={styles.coords}>
-            {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
-          </Text>
-          <Text style={styles.accuracy}>
-            ±{Math.round(location.coords.accuracy ?? 0)} m accuracy
-          </Text>
-        </>
-      ) : (
-        <Text style={styles.message}>Acquiring GPS…</Text>
-      )}
-      <StatusBar style="auto" />
-    </View>
-  );
+  return <FinderScreen />;
 }
 
 const styles = StyleSheet.create({
@@ -98,15 +78,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  coords: {
-    fontSize: 16,
-    fontFamily: 'monospace' as const,
-    color: '#333',
-    marginBottom: 6,
-  },
-  accuracy: {
-    fontSize: 13,
-    color: '#999',
   },
 });
