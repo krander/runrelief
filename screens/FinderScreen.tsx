@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, PanResponder, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLocation } from '../hooks/useLocation';
 import { useBathrooms } from '../hooks/useBathrooms';
 import BathroomCard from '../components/BathroomCard';
+import PaginationDots from '../components/PaginationDots';
 import TakeMeThereButton from '../components/TakeMeThereButton';
 
 function BathroomPin({ isNearest }: { isNearest: boolean }) {
@@ -36,7 +37,8 @@ function BathroomPin({ isNearest }: { isNearest: boolean }) {
   );
 }
 
-// Keyed from FinderScreen — remounting resets slideAnim and re-fires the spring.
+// Keyed on bathrooms[0].id — remounts (and re-fires the spring) only when GPS
+// delivers a new nearest result, not on every swipe.
 function BottomSheet({ children }: { children: React.ReactNode }) {
   const slideAnim = useRef(new Animated.Value(180)).current;
 
@@ -59,31 +61,87 @@ function BottomSheet({ children }: { children: React.ReactNode }) {
 export default function FinderScreen() {
   const { location } = useLocation(true);
 
-  const latitude = location?.coords.latitude ?? null;
+  const latitude  = location?.coords.latitude  ?? null;
   const longitude = location?.coords.longitude ?? null;
 
-  const { bathrooms, loading } = useBathrooms(latitude, longitude);
+  const { bathrooms, loading, refresh } = useBathrooms(latitude, longitude);
 
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Refs so PanResponder callbacks never capture stale values.
+  const selectedIndexRef = useRef(0);
+  const bathroomsRef     = useRef(bathrooms);
+  selectedIndexRef.current = selectedIndex;
+  bathroomsRef.current     = bathrooms;
+
+  const mapRef = useRef<MapView>(null);
+
+  // Return to nearest result whenever fresh bathroom data arrives.
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [bathrooms]);
+
+  // Animate the map to the selected bathroom on every index change.
+  // Reads bathroomsRef (not bathrooms) to avoid triggering on every data
+  // refresh — the setSelectedIndex(0) above will trigger this via selectedIndex.
+  useEffect(() => {
+    const bathroom = bathroomsRef.current[selectedIndex];
+    if (!bathroom) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: bathroom.latitude,
+        longitude: bathroom.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      500,
+    );
+  }, [selectedIndex]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Claim the gesture only for clearly horizontal swipes.
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5,
+      onPanResponderRelease: (_, { dx }) => {
+        const idx = selectedIndexRef.current;
+        const len = bathroomsRef.current.length;
+        if (dx < -50 && idx < len - 1) setSelectedIndex(idx + 1);
+        else if (dx > 50 && idx > 0)   setSelectedIndex(idx - 1);
+      },
+    }),
+  ).current;
+
+  // Include selectedIndex in deps so the two affected markers remount when the
+  // active selection changes — required because tracksViewChanges={false} takes
+  // a one-time snapshot; embedding the active state in the key forces a fresh
+  // snapshot for only the two pins whose appearance changed.
   const markers = useMemo(
     () =>
       bathrooms.map((bathroom, index) => (
         <Marker
-          key={bathroom.id}
+          key={`${bathroom.id}-${index === selectedIndex}`}
           coordinate={{ latitude: bathroom.latitude, longitude: bathroom.longitude }}
           tracksViewChanges={false}
+          onPress={() => {
+            if (index === selectedIndex) return;
+            setSelectedIndex(index);
+          }}
         >
-          <BathroomPin isNearest={index === 0} />
+          <BathroomPin isNearest={index === selectedIndex} />
         </Marker>
       )),
-    [bathrooms],
+    [bathrooms, selectedIndex],
   );
+
+  const selected = bathrooms[selectedIndex] ?? bathrooms[0];
 
   return (
     <>
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         showsUserLocation
-        followsUserLocation
         showsCompass={false}
         showsScale={false}
         initialRegion={
@@ -106,10 +164,13 @@ export default function FinderScreen() {
           </View>
         </View>
       )}
-      {bathrooms.length > 0 && (
+      {bathrooms.length > 0 && selected && (
         <BottomSheet key={bathrooms[0].id}>
-          <BathroomCard bathroom={bathrooms[0]} />
-          <TakeMeThereButton bathroom={bathrooms[0]} />
+          <View {...panResponder.panHandlers}>
+            <BathroomCard bathroom={selected} onRefresh={refresh} />
+          </View>
+          <PaginationDots total={bathrooms.length} activeIndex={selectedIndex} />
+          <TakeMeThereButton bathroom={selected} />
         </BottomSheet>
       )}
       <StatusBar style="dark" />

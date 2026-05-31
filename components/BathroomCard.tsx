@@ -1,13 +1,18 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Bathroom } from '../lib/overpass';
+import supabase from '../lib/supabase';
 
 type Props = {
   bathroom: Bathroom & { distanceMiles: number };
+  onRefresh?: () => void;
 };
 
+type ReportState = 'idle' | 'reported' | 'error';
+
 function StatusBadge({ isOpen }: { isOpen: boolean | null }) {
-  const label = isOpen === true ? 'Open' : isOpen === false ? 'Closed' : 'Status Unknown';
+  const label = isOpen === true ? 'Open' : isOpen === false ? 'Closed' : 'Hours Unknown';
   const badgeStyle =
     isOpen === true ? styles.badgeOpen : isOpen === false ? styles.badgeClosed : styles.badgeUnknown;
   return (
@@ -17,7 +22,38 @@ function StatusBadge({ isOpen }: { isOpen: boolean | null }) {
   );
 }
 
-export default function BathroomCard({ bathroom }: Props) {
+export default function BathroomCard({ bathroom, onRefresh }: Props) {
+  const [reportState, setReportState] = useState<ReportState>('idle');
+
+  const handleReport = () => {
+    Alert.alert(
+      'Report an Issue',
+      'Report this bathroom as incorrect or no longer there?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: () => {
+            setReportState('reported'); // optimistic
+            supabase
+              .from('community_pins')
+              .update({ is_flagged: true })
+              .eq('id', bathroom.id)
+              .then(({ error }) => {
+                if (error) {
+                  console.error('[report] flag error:', error.message);
+                  setReportState('error');
+                } else {
+                  onRefresh?.();
+                }
+              });
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
@@ -33,6 +69,21 @@ export default function BathroomCard({ bathroom }: Props) {
         <Text style={styles.distance}>{bathroom.distanceMiles} mi</Text>
         <StatusBadge isOpen={bathroom.isOpen} />
       </View>
+      {bathroom.source === 'community' && (
+        <View style={styles.reportRow}>
+          {reportState === 'idle' && (
+            <TouchableOpacity onPress={handleReport} hitSlop={8}>
+              <Text style={styles.reportLink}>Report an Issue</Text>
+            </TouchableOpacity>
+          )}
+          {reportState === 'reported' && (
+            <Text style={styles.reportSuccess}>Thanks for the report! 🙌</Text>
+          )}
+          {reportState === 'error' && (
+            <Text style={styles.reportError}>Couldn't submit report. Please try again.</Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -89,5 +140,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  reportRow: {
+    marginTop: 10,
+  },
+  reportLink: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    textDecorationLine: 'underline',
+  },
+  reportSuccess: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  reportError: {
+    fontSize: 12,
+    color: '#FF3B30',
   },
 });
