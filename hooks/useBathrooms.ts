@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import {
   fetchBathroomsFromOSM,
   parseBathroomsFromOSM,
@@ -10,6 +11,7 @@ import { sortBathroomsByDistance } from '../lib/utils';
 const EARTH_RADIUS_METERS = 6_371_000;
 const DEDUP_THRESHOLD_METERS = 20;
 const MAX_RESULTS = 5;
+const MAX_DISTANCE_MILES = 1.0;
 
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
@@ -47,6 +49,7 @@ type UseBathroomsResult = {
   bathrooms: Array<Bathroom & { distanceMiles: number }>;
   loading: boolean;
   error: string | null;
+  isOffline: boolean;
   refresh: () => void;
 };
 
@@ -58,14 +61,36 @@ export function useBathrooms(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Cache OSM results so a manual refresh (refreshKey change) can reuse them
-  // instead of hitting the Overpass API again. Overpass is slow and rate-limits
-  // rapid re-requests, which caused setBathrooms([]) via the catch block.
-  const osmCacheRef = useRef<Bathroom[]>([]);
-  const osmCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
+  // instead of hitting the Overpass API again. Overpass rate-limits rapid
+  // re-requests, which caused setBathrooms([]) via the catch block.
+  const osmCacheRef   = useRef<Bathroom[]>([]);
+  const osmCoordsRef  = useRef<{ lat: number; lon: number } | null>(null);
+
+  // Cache last successful bathroom list so it can be served while offline.
+  const resultsCacheRef = useRef<Array<Bathroom & { distanceMiles: number }>>([]);
+
+  // Track whether we went offline so we know when to auto-refresh on reconnect.
+  const wasOfflineRef = useRef(false);
 
   const refresh = () => setRefreshKey((k) => k + 1);
+
+  // Auto-refresh when connectivity is restored after an offline period.
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected && wasOfflineRef.current) {
+        wasOfflineRef.current = false;
+        setIsOffline(false);
+        setRefreshKey((k) => k + 1);
+      } else if (!state.isConnected) {
+        wasOfflineRef.current = true;
+        setIsOffline(true);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (latitude === null || longitude === null) return;
@@ -85,14 +110,11 @@ export function useBathrooms(
         let osmBathrooms: Bathroom[];
 
         if (coordsChanged) {
-          // New position — fetch fresh OSM data and update the cache.
           const osmResponse = await fetchBathroomsFromOSM(latitude, longitude);
           osmBathrooms = parseBathroomsFromOSM(osmResponse.elements);
           osmCacheRef.current = osmBathrooms;
           osmCoordsRef.current = { lat: latitude, lon: longitude };
         } else {
-          // Same position, manual refresh — reuse cached OSM data and only
-          // re-fetch community pins (the flagged pin will now be excluded).
           osmBathrooms = osmCacheRef.current;
         }
 
@@ -102,14 +124,30 @@ export function useBathrooms(
 
         const merged = deduplicateBathrooms(osmBathrooms, communityPins);
         const sorted = sortBathroomsByDistance(merged, latitude, longitude);
+        const results = sorted
+          .filter((b) => b.distanceMiles <= MAX_DISTANCE_MILES)
+          .slice(0, MAX_RESULTS);
 
-        setBathrooms(sorted.slice(0, MAX_RESULTS));
+        // Update the results cache for offline fallback.
+        resultsCacheRef.current = results;
+        setIsOffline(false);
+        setBathrooms(results);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load bathrooms');
-        // Only clear the list when coordinates changed (fresh start).
-        // On a manual refresh, keep existing pins visible rather than wiping them.
-        if (coordsChanged) setBathrooms([]);
+
+        // Check connectivity to distinguish network failures from API errors.
+        const netState = await NetInfo.fetch();
+        const offline = !netState.isConnected;
+
+        setIsOffline(offline);
+
+        if (offline && resultsCacheRef.current.length > 0) {
+          // Serve cached results while offline.
+          setBathrooms(resultsCacheRef.current);
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to load bathrooms');
+          if (coordsChanged) setBathrooms([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -118,5 +156,5 @@ export function useBathrooms(
     return () => { cancelled = true; };
   }, [latitude, longitude, refreshKey]);
 
-  return { bathrooms, loading, error, refresh };
+  return { bathrooms, loading, error, isOffline, refresh };
 }

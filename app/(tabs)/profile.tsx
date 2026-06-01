@@ -3,23 +3,41 @@ import { StatusBar } from 'expo-status-bar';
 
 export default function ProfileScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+    <View style={styles.screen}>
       <StatusBar style="light" />
+      <Text style={styles.wordmark}>RunRelief</Text>
+      <Text style={styles.soon}>Profile coming soon</Text>
+      <Text style={styles.note}>
+        Contribution stats and achievements will live here
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#0A0A0A',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
   },
-  title: {
-    fontSize: 22,
+  wordmark: {
+    fontSize: 36,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#FFD60A',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  soon: {
+    fontSize: 16,
+    color: '#888888',
+    marginBottom: 8,
+  },
+  note: {
+    fontSize: 13,
+    color: '#555555',
+    textAlign: 'center',
+    lineHeight: 19,
   },
 });

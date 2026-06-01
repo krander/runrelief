@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, PanResponder, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../hooks/useLocation';
 import { useBathrooms } from '../hooks/useBathrooms';
 import BathroomCard from '../components/BathroomCard';
@@ -58,13 +60,71 @@ function BottomSheet({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LocateMeButton({ onPress, isOffline }: { onPress: () => void; isOffline: boolean }) {
+  const { top } = useSafeAreaInsets();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const spring = (toValue: number) =>
+    Animated.spring(scaleAnim, { toValue, useNativeDriver: true, tension: 300, friction: 20 }).start();
+
+  // Sit below the status bar, plus the offline banner height when visible.
+  const OFFLINE_BANNER_HEIGHT = 30;
+  const buttonTop = top + (isOffline ? OFFLINE_BANNER_HEIGHT + 8 : 16);
+
+  return (
+    <Pressable
+      style={[styles.locateMe, { top: buttonTop }]}
+      onPressIn={() => spring(0.88)}
+      onPressOut={() => spring(1)}
+      onPress={onPress}
+    >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#FFD60A" />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function OfflineBanner() {
+  const { top } = useSafeAreaInsets();
+  return (
+    <View style={[styles.offlineBanner, { top }]} pointerEvents="none">
+      <MaterialCommunityIcons name="wifi-off" size={14} color="#FFD60A" style={styles.offlineIcon} />
+      <Text style={styles.offlineText}>Offline — showing last known results</Text>
+    </View>
+  );
+}
+
+function EmptyState({ isOffline }: { isOffline: boolean }) {
+  return (
+    <View style={styles.emptySheet}>
+      <MaterialCommunityIcons name="map-search" size={36} color="#888888" style={styles.emptyIcon} />
+      <Text style={styles.emptyTitle}>No bathrooms found nearby</Text>
+      <Text style={styles.emptySubtitle}>
+        {isOffline
+          ? 'No connection — move to an area with signal to find bathrooms'
+          : 'Try moving to a busier area or add one yourself'}
+      </Text>
+      {!isOffline && (
+        <TouchableOpacity
+          style={styles.emptyButton}
+          onPress={() => router.navigate('/add')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.emptyButtonLabel}>Report a Bathroom</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 export default function FinderScreen() {
   const { location } = useLocation(true);
 
   const latitude  = location?.coords.latitude  ?? null;
   const longitude = location?.coords.longitude ?? null;
 
-  const { bathrooms, loading, refresh } = useBathrooms(latitude, longitude);
+  const { bathrooms, loading, isOffline, refresh } = useBathrooms(latitude, longitude);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -82,8 +142,6 @@ export default function FinderScreen() {
   }, [bathrooms]);
 
   // Animate the map to the selected bathroom on every index change.
-  // Reads bathroomsRef (not bathrooms) to avoid triggering on every data
-  // refresh — the setSelectedIndex(0) above will trigger this via selectedIndex.
   useEffect(() => {
     const bathroom = bathroomsRef.current[selectedIndex];
     if (!bathroom) return;
@@ -100,7 +158,6 @@ export default function FinderScreen() {
 
   const panResponder = useRef(
     PanResponder.create({
-      // Claim the gesture only for clearly horizontal swipes.
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
         Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5,
       onPanResponderRelease: (_, { dx }) => {
@@ -112,10 +169,6 @@ export default function FinderScreen() {
     }),
   ).current;
 
-  // Include selectedIndex in deps so the two affected markers remount when the
-  // active selection changes — required because tracksViewChanges={false} takes
-  // a one-time snapshot; embedding the active state in the key forces a fresh
-  // snapshot for only the two pins whose appearance changed.
   const markers = useMemo(
     () =>
       bathrooms.map((bathroom, index) => (
@@ -135,6 +188,19 @@ export default function FinderScreen() {
   );
 
   const selected = bathrooms[selectedIndex] ?? bathrooms[0];
+
+  const handleLocateMe = () => {
+    if (!location) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      500,
+    );
+  };
 
   return (
     <>
@@ -157,13 +223,17 @@ export default function FinderScreen() {
       >
         {markers}
       </MapView>
+
       {loading && (
-        <View style={styles.loadingOverlay} pointerEvents="none">
-          <View style={styles.loadingBadge}>
-            <ActivityIndicator size="small" color="#666666" />
-          </View>
+        <View style={styles.loadingCenter} pointerEvents="none">
+          <ActivityIndicator size="large" color="#FFD60A" />
         </View>
       )}
+
+      <LocateMeButton onPress={handleLocateMe} isOffline={isOffline} />
+      {isOffline && <OfflineBanner />}
+      {!loading && bathrooms.length === 0 && <EmptyState isOffline={isOffline} />}
+
       {bathrooms.length > 0 && selected && (
         <BottomSheet key={bathrooms[0].id}>
           <View {...panResponder.panHandlers}>
@@ -173,6 +243,7 @@ export default function FinderScreen() {
           <TakeMeThereButton bathroom={selected} />
         </BottomSheet>
       )}
+
       <StatusBar style="dark" />
     </>
   );
@@ -188,17 +259,90 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  loadingOverlay: {
+  loadingCenter: {
     position: 'absolute',
-    top: 64,
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptySheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 44,
     alignItems: 'center',
   },
-  loadingBadge: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+  emptyIcon: {
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#888888',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#FFD60A',
+    paddingVertical: 14,
     borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  emptyButtonLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  offlineBanner: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 7,
+    gap: 6,
+  },
+  offlineIcon: {
+    opacity: 0.85,
+  },
+  locateMe: {
+    position: 'absolute',
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+  },
+  offlineText: {
+    fontSize: 12,
+    color: '#FFD60A',
+    opacity: 0.85,
   },
 });
