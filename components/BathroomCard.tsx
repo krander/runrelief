@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Bathroom } from '../lib/overpass';
 import supabase from '../lib/supabase';
+import { colors } from '../lib/theme';
 
 type Props = {
   bathroom: Bathroom & { distanceMiles: number };
@@ -61,7 +62,7 @@ export default function BathroomCard({ bathroom, onRefresh }: Props) {
       </Text>
       {bathroom.source === 'community' && (
         <View style={styles.communityBadge}>
-          <MaterialCommunityIcons name="account-group" size={12} color="#FFD60A" />
+          <MaterialCommunityIcons name="account-group" size={12} color={colors.accent} />
           <Text style={styles.communityLabel}>Community Reported</Text>
         </View>
       )}
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 6,
   },
   communityBadge: {
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   },
   communityLabel: {
     fontSize: 11,
-    color: '#FFD60A',
+    color: colors.accent,
   },
   meta: {
     flexDirection: 'row',
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   distance: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFD60A',
+    color: colors.accent,
   },
   badge: {
     borderRadius: 6,
@@ -128,33 +129,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   badgeOpen: {
-    backgroundColor: 'rgba(52,199,89,0.3)',
+    backgroundColor: colors.statusOpen,
   },
   badgeClosed: {
-    backgroundColor: 'rgba(255,59,48,0.3)',
+    backgroundColor: colors.statusClosed,
   },
   badgeUnknown: {
-    backgroundColor: 'rgba(142,142,147,0.25)',
+    backgroundColor: colors.statusUnknown,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
   reportRow: {
     marginTop: 10,
   },
   reportLink: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: colors.reportLink,
     textDecorationLine: 'underline',
   },
   reportSuccess: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.reportSuccess,
   },
   reportError: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: colors.error,
   },
 });

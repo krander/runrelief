@@ -10,12 +10,13 @@ import { useBathrooms } from '../hooks/useBathrooms';
 import BathroomCard from '../components/BathroomCard';
 import PaginationDots from '../components/PaginationDots';
 import TakeMeThereButton from '../components/TakeMeThereButton';
+import { colors } from '../lib/theme';
 
 function BathroomPin({ isNearest }: { isNearest: boolean }) {
   const size      = isNearest ? 48 : 38;
   const iconSize  = isNearest ? 28 : 22;
-  const bg        = isNearest ? '#1A1A1A' : '#888888';
-  const iconColor = isNearest ? '#FFD60A' : '#FFFFFF';
+  const bg        = isNearest ? colors.surface : colors.muted;
+  const iconColor = isNearest ? colors.accent  : colors.white;
 
   return (
     <View
@@ -27,8 +28,8 @@ function BathroomPin({ isNearest }: { isNearest: boolean }) {
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: '#FFFFFF',
-        shadowColor: '#000000',
+        borderColor: colors.white,
+        shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
@@ -79,7 +80,7 @@ function LocateMeButton({ onPress, isOffline }: { onPress: () => void; isOffline
       onPress={onPress}
     >
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#FFD60A" />
+        <MaterialCommunityIcons name="crosshairs-gps" size={22} color={colors.accent} />
       </Animated.View>
     </Pressable>
   );
@@ -89,7 +90,7 @@ function OfflineBanner() {
   const { top } = useSafeAreaInsets();
   return (
     <View style={[styles.offlineBanner, { top }]} pointerEvents="none">
-      <MaterialCommunityIcons name="wifi-off" size={14} color="#FFD60A" style={styles.offlineIcon} />
+      <MaterialCommunityIcons name="wifi-off" size={14} color={colors.accent} style={styles.offlineIcon} />
       <Text style={styles.offlineText}>Offline — showing last known results</Text>
     </View>
   );
@@ -98,7 +99,7 @@ function OfflineBanner() {
 function EmptyState({ isOffline }: { isOffline: boolean }) {
   return (
     <View style={styles.emptySheet}>
-      <MaterialCommunityIcons name="map-search" size={36} color="#888888" style={styles.emptyIcon} />
+      <MaterialCommunityIcons name="map-search" size={36} color={colors.muted} style={styles.emptyIcon} />
       <Text style={styles.emptyTitle}>No bathrooms found nearby</Text>
       <Text style={styles.emptySubtitle}>
         {isOffline
@@ -226,7 +227,7 @@ export default function FinderScreen() {
 
       {loading && (
         <View style={styles.loadingCenter} pointerEvents="none">
-          <ActivityIndicator size="large" color="#FFD60A" />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       )}
 
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: colors.overlay,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: colors.overlay,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 24,
@@ -287,19 +288,19 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.muted,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 12,
     alignSelf: 'stretch',
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
   emptyButtonLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.surface,
   },
   offlineBanner: {
     position: 'absolute',
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     paddingVertical: 7,
     gap: 6,
   },
@@ -330,19 +331,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: colors.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
     shadowRadius: 4,
   },
   offlineText: {
     fontSize: 12,
-    color: '#FFD60A',
+    color: colors.accent,
     opacity: 0.85,
   },
 });

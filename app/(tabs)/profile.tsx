@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { colors } from '../../lib/theme';
 
 export default function ProfileScreen() {
   return (
@@ -17,7 +18,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -25,18 +26,18 @@ const styles = StyleSheet.create({
   wordmark: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#FFD60A',
+    color: colors.accent,
     marginBottom: 12,
     letterSpacing: 0.5,
   },
   soon: {
     fontSize: 16,
-    color: '#888888',
+    color: colors.muted,
     marginBottom: 8,
   },
   note: {
     fontSize: 13,
-    color: '#555555',
+    color: colors.muted,
     textAlign: 'center',
     lineHeight: 19,
   },

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import { colors } from '../lib/theme';
 
 type Props = {
   total: number;
@@ -26,7 +27,7 @@ function Dot({ isActive }: { isActive: boolean }) {
     <Animated.View
       style={[
         styles.dot,
-        { backgroundColor: isActive ? '#FFD60A' : '#FFFFFF' },
+        { backgroundColor: isActive ? colors.accent : colors.white },
         { transform: [{ scale }], opacity },
       ]}
     />

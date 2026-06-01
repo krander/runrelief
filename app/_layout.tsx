@@ -4,6 +4,7 @@ import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { colors } from '../lib/theme';
 
 type PermissionStatus = 'loading' | 'granted' | 'denied';
 
@@ -51,7 +52,7 @@ export default function RootLayout() {
     return (
       <View style={styles.screen}>
         <StatusBar style="light" />
-        <MaterialCommunityIcons name="map-marker-off" size={56} color="#FFD60A" style={styles.icon} />
+        <MaterialCommunityIcons name="map-marker-off" size={56} color={colors.accent} style={styles.icon} />
         <Text style={styles.title}>Location Required</Text>
         <Text style={styles.message}>
           RunRelief needs your location to find nearby bathrooms. Please enable
@@ -70,7 +71,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -81,19 +82,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
-    color: '#888888',
+    color: colors.muted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 32,
   },
   button: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: 14,
     alignSelf: 'stretch',
@@ -102,6 +103,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#000000',
+    color: colors.black,
   },
 });

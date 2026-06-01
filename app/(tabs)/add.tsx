@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useLocation } from '../../hooks/useLocation';
 import supabase from '../../lib/supabase';
+import { colors } from '../../lib/theme';
 
 type BathroomType = 'porta-potty' | 'restroom';
 
@@ -197,7 +198,7 @@ export default function AddScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: colors.bg,
   },
   successScreen: {
     justifyContent: 'center',
@@ -209,19 +210,19 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 12,
   },
   successSubtitle: {
     fontSize: 15,
-    color: '#888888',
+    color: colors.muted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 40,
   },
   backButton: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     paddingHorizontal: 40,
     borderRadius: 14,
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   backButtonLabel: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.surface,
   },
   scroll: {
     flex: 1,
@@ -242,12 +243,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#888888',
+    color: colors.muted,
     lineHeight: 20,
     marginBottom: 24,
   },
@@ -262,25 +263,25 @@ const styles = StyleSheet.create({
   },
   mapPlaceholder: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mapPlaceholderText: {
-    color: '#888888',
+    color: colors.muted,
     fontSize: 14,
   },
   pin: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.white,
   },
   locationLabel: {
     fontSize: 12,
-    color: '#666666',
+    color: colors.muted,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -293,32 +294,32 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(136,136,136,0.2)',
+    borderColor: colors.borderMuted,
     alignItems: 'center',
   },
   typeButtonActive: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FFD60A',
+    borderColor: colors.accent,
   },
   typeLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#888888',
+    color: colors.muted,
   },
   typeLabelActive: {
-    color: '#FFD60A',
+    color: colors.accent,
   },
   noLocationMessage: {
     fontSize: 13,
-    color: '#888888',
+    color: colors.muted,
     textAlign: 'center',
     marginBottom: 12,
   },
   submitButton: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
@@ -327,6 +328,6 @@ const styles = StyleSheet.create({
   submitLabel: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: colors.surface,
   },
 });

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Animated, Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Bathroom } from '../lib/overpass';
+import { colors } from '../lib/theme';
 
 type Props = {
   bathroom: Bathroom;
@@ -44,7 +45,7 @@ export default function TakeMeThereButton({ bathroom }: Props) {
       accessibilityLabel="Get walking directions to this bathroom"
     >
       <Animated.View style={[styles.button, { transform: [{ scale: scaleAnim }] }]}>
-        <MaterialCommunityIcons name="run" size={22} color="#000000" />
+        <MaterialCommunityIcons name="run" size={22} color={colors.black} />
         <Text style={styles.label}>Take Me There</Text>
       </Animated.View>
     </Pressable>
@@ -53,7 +54,7 @@ export default function TakeMeThereButton({ bathroom }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#FFD60A',
+    backgroundColor: colors.accent,
     marginHorizontal: 20,
     marginBottom: 16,
     marginTop: 12,
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
 label: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#000000',
+    color: colors.black,
     letterSpacing: 0.2,
   },
 });
