@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, PanResponder, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, PanResponder, Pressable, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -11,11 +11,16 @@ import BathroomCard from '../components/BathroomCard';
 import PaginationDots from '../components/PaginationDots';
 import TakeMeThereButton from '../components/TakeMeThereButton';
 import { colors } from '../lib/theme';
+import supabase from '../lib/supabase';
+
+// Approximate height of the bottom sheet (card + pagination + tab bar).
+// Used as mapPadding so Apple Maps centers the camera in the visible area above the sheet.
+const BOTTOM_SHEET_HEIGHT = 320;
 
 function BathroomPin({ isNearest }: { isNearest: boolean }) {
   const size      = isNearest ? 48 : 38;
   const iconSize  = isNearest ? 28 : 22;
-  const bg        = isNearest ? colors.surface : colors.muted;
+  const bg        = isNearest ? colors.pinActive : colors.pinInactive;
   const iconColor = isNearest ? colors.accent  : colors.white;
 
   return (
@@ -80,7 +85,7 @@ function LocateMeButton({ onPress, isOffline }: { onPress: () => void; isOffline
       onPress={onPress}
     >
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <MaterialCommunityIcons name="crosshairs-gps" size={22} color={colors.accent} />
+        <MaterialCommunityIcons name="navigation-variant" size={22} color={colors.accent} />
       </Animated.View>
     </Pressable>
   );
@@ -127,7 +132,19 @@ export default function FinderScreen() {
 
   const { bathrooms, loading, isOffline, refresh } = useBathrooms(latitude, longitude);
 
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = screenWidth - 32;
+
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [reportState, setReportState] = useState<'idle' | 'reported' | 'error'>('idle');
+
+  // Card slide animation
+  const outX = useRef(new Animated.Value(0)).current;
+  const inX  = useRef(new Animated.Value(0)).current;
+  const cardAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [displayedIndex, setDisplayedIndex] = useState(0);
+  const displayedIndexRef = useRef(0);
+  const [leavingIndex, setLeavingIndex] = useState<number | null>(null);
 
   // Refs so PanResponder callbacks never capture stale values.
   const selectedIndexRef = useRef(0);
@@ -142,7 +159,18 @@ export default function FinderScreen() {
     setSelectedIndex(0);
   }, [bathrooms]);
 
+  // Reset card display state when bathroom data changes (skip animation).
+  useEffect(() => {
+    cardAnimRef.current?.stop();
+    displayedIndexRef.current = 0;
+    setDisplayedIndex(0);
+    setLeavingIndex(null);
+    outX.setValue(0);
+    inX.setValue(0);
+  }, [bathrooms]);
+
   // Animate the map to the selected bathroom on every index change.
+  // mapPadding (BOTTOM_SHEET_HEIGHT) causes animateToRegion to center within the visible area.
   useEffect(() => {
     const bathroom = bathroomsRef.current[selectedIndex];
     if (!bathroom) return;
@@ -157,6 +185,45 @@ export default function FinderScreen() {
     );
   }, [selectedIndex]);
 
+  // Slide card horizontally when selected index changes.
+  useEffect(() => {
+    if (selectedIndex === displayedIndexRef.current) return;
+
+    const prevIdx = displayedIndexRef.current;
+    const len = bathroomsRef.current.length;
+    const goForward =
+      prevIdx === len - 1 && selectedIndex === 0 ? true   // wrap: last → first
+      : prevIdx === 0 && selectedIndex === len - 1 ? false  // wrap: first → last
+      : selectedIndex > prevIdx;
+
+    cardAnimRef.current?.stop();
+    outX.setValue(0);
+    inX.setValue(goForward ? cardWidth : -cardWidth);
+
+    displayedIndexRef.current = selectedIndex;
+    setDisplayedIndex(selectedIndex);
+    setLeavingIndex(prevIdx);
+
+    cardAnimRef.current = Animated.parallel([
+      Animated.spring(outX, {
+        toValue: goForward ? -cardWidth : cardWidth,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 12,
+      }),
+      Animated.spring(inX, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 12,
+      }),
+    ]);
+
+    cardAnimRef.current.start(({ finished }) => {
+      if (finished) setLeavingIndex(null);
+    });
+  }, [selectedIndex, cardWidth]);
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, { dx, dy }) =>
@@ -164,8 +231,8 @@ export default function FinderScreen() {
       onPanResponderRelease: (_, { dx }) => {
         const idx = selectedIndexRef.current;
         const len = bathroomsRef.current.length;
-        if (dx < -50 && idx < len - 1) setSelectedIndex(idx + 1);
-        else if (dx > 50 && idx > 0)   setSelectedIndex(idx - 1);
+        if (dx < -50)      setSelectedIndex((idx + 1) % len);
+        else if (dx > 50)  setSelectedIndex((idx - 1 + len) % len);
       },
     }),
   ).current;
@@ -190,6 +257,41 @@ export default function FinderScreen() {
 
   const selected = bathrooms[selectedIndex] ?? bathrooms[0];
 
+  // Reset report state whenever the selected bathroom changes.
+  useEffect(() => {
+    setReportState('idle');
+  }, [selected?.id]);
+
+  const handleReport = () => {
+    if (!selected || selected.source !== 'community') return;
+    Alert.alert(
+      'Report an Issue',
+      'Report this bathroom as incorrect or no longer there?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: () => {
+            setReportState('reported');
+            supabase
+              .from('community_pins')
+              .update({ is_flagged: true })
+              .eq('id', selected.id)
+              .then(({ error }) => {
+                if (error) {
+                  setReportState('error');
+                } else {
+                  refresh();
+                }
+              });
+          },
+        },
+      ],
+    );
+  };
+
+  // mapPadding (BOTTOM_SHEET_HEIGHT) causes animateToRegion to center within the visible area.
   const handleLocateMe = () => {
     if (!location) return;
     mapRef.current?.animateToRegion(
@@ -208,9 +310,11 @@ export default function FinderScreen() {
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
+        userInterfaceStyle="dark"
         showsUserLocation
         showsCompass={false}
         showsScale={false}
+        mapPadding={{ top: 0, left: 0, right: 0, bottom: BOTTOM_SHEET_HEIGHT }}
         initialRegion={
           location
             ? {
@@ -237,11 +341,33 @@ export default function FinderScreen() {
 
       {bathrooms.length > 0 && selected && (
         <BottomSheet key={bathrooms[0].id}>
-          <View {...panResponder.panHandlers}>
-            <BathroomCard bathroom={selected} onRefresh={refresh} />
+          <View style={styles.cardSlot}>
+            {leavingIndex !== null && bathrooms[leavingIndex] && (
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.cardAbsolute, styles.cardElevated, { transform: [{ translateX: outX }] }]}
+              >
+                <BathroomCard bathroom={bathrooms[leavingIndex]!} reportState="idle" />
+                <View style={styles.divider} />
+                <TakeMeThereButton bathroom={bathrooms[leavingIndex]!} />
+              </Animated.View>
+            )}
+            <Animated.View
+              {...panResponder.panHandlers}
+              style={[styles.cardElevated, { transform: [{ translateX: inX }] }]}
+            >
+              <BathroomCard
+                bathroom={bathrooms[displayedIndex] ?? selected}
+                onReport={handleReport}
+                reportState={reportState}
+              />
+              <View style={styles.divider} />
+              <TakeMeThereButton bathroom={bathrooms[displayedIndex] ?? selected} />
+            </Animated.View>
           </View>
-          <PaginationDots total={bathrooms.length} activeIndex={selectedIndex} />
-          <TakeMeThereButton bathroom={selected} />
+          <View style={styles.paginationWrapper}>
+            <PaginationDots total={bathrooms.length} activeIndex={selectedIndex} />
+          </View>
         </BottomSheet>
       )}
 
@@ -256,9 +382,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.overlay,
+    backgroundColor: colors.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   loadingCenter: {
     position: 'absolute',
@@ -345,5 +473,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.accent,
     opacity: 0.85,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginVertical: 8,
+  },
+  cardSlot: {
+    overflow: 'hidden',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  cardAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  cardElevated: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    padding: 16,
+  },
+  paginationWrapper: {
+    marginTop: 10,
+    marginBottom: 10,
   },
 });

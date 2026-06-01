@@ -55,10 +55,9 @@ export default function TakeMeThereButton({ bathroom }: Props) {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.accent,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    marginTop: 12,
-    borderRadius: 14,
+    marginBottom: 0,
+    marginTop: 8,
+    borderRadius: 999,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',

@@ -140,6 +140,7 @@ export default function AddScreen() {
             <MapView
               style={styles.map}
               region={mapRegion}
+              userInterfaceStyle="dark"
               scrollEnabled={false}
               zoomEnabled={false}
               rotateEnabled={false}
