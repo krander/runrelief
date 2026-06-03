@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.borderSubtle,
     padding: 16,
   },
   paginationWrapper: {

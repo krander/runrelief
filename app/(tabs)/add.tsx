@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -166,22 +167,25 @@ export default function AddScreen() {
           Bathroom will be added at your current location
         </Text>
 
-        <View style={styles.typeRow}>
-          {(['porta-potty', 'restroom'] as BathroomType[]).map((type) => {
-            const isActive = selectedType === type;
-            return (
+        <Text style={styles.sectionLabel}>Bathroom type</Text>
+        <View style={styles.typeContainer}>
+          {(['porta-potty', 'restroom'] as BathroomType[]).map((type, index, arr) => (
+            <Fragment key={type}>
               <TouchableOpacity
-                key={type}
-                style={[styles.typeButton, isActive && styles.typeButtonActive]}
+                style={styles.typeOption}
                 onPress={() => setSelectedType(type)}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.typeLabel, isActive && styles.typeLabelActive]}>
+                <Text style={styles.typeOptionLabel}>
                   {type === 'porta-potty' ? 'Porta-Potty' : 'Restroom'}
                 </Text>
+                {selectedType === type && (
+                  <MaterialCommunityIcons name="check" size={20} color={colors.accent} />
+                )}
               </TouchableOpacity>
-            );
-          })}
+              {index < arr.length - 1 && <View style={styles.typeDivider} />}
+            </Fragment>
+          ))}
         </View>
 
         {noLocation && (
@@ -281,37 +285,40 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   locationLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     textAlign: 'center',
     marginBottom: 32,
   },
-  typeRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    marginBottom: 12,
   },
-  typeButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+  typeContainer: {
     backgroundColor: colors.surface,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderMuted,
+    borderColor: colors.borderSubtle,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  typeOption: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  typeButtonActive: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: colors.accent,
+  typeOptionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.white,
   },
-  typeLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.muted,
-  },
-  typeLabelActive: {
-    color: colors.accent,
+  typeDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
   },
   noLocationMessage: {
     fontSize: 13,
