@@ -43,7 +43,12 @@ export default function BathroomCard({ bathroom, onReport, reportState }: Props)
       {bathroom.source === 'community' && onReport && (
         <View style={styles.reportSection}>
           {(!reportState || reportState === 'idle') && (
-            <TouchableOpacity onPress={onReport} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={onReport}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Report an issue with this bathroom"
+            >
               <Text style={styles.reportLink}>Report an Issue</Text>
             </TouchableOpacity>
           )}

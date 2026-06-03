@@ -83,6 +83,8 @@ function LocateMeButton({ onPress, isOffline }: { onPress: () => void; isOffline
       onPressIn={() => spring(0.88)}
       onPressOut={() => spring(1)}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Center map on my location"
     >
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <MaterialCommunityIcons name="navigation-variant" size={22} color={colors.accent} />
@@ -94,7 +96,7 @@ function LocateMeButton({ onPress, isOffline }: { onPress: () => void; isOffline
 function OfflineBanner() {
   const { top } = useSafeAreaInsets();
   return (
-    <View style={[styles.offlineBanner, { top }]} pointerEvents="none">
+    <View style={[styles.offlineBanner, { top }]} pointerEvents="none" accessibilityRole="alert">
       <MaterialCommunityIcons name="wifi-off" size={14} color={colors.accent} style={styles.offlineIcon} />
       <Text style={styles.offlineText}>Offline — showing last known results</Text>
     </View>
@@ -116,6 +118,7 @@ function EmptyState({ isOffline }: { isOffline: boolean }) {
           style={styles.emptyButton}
           onPress={() => router.navigate('/add')}
           activeOpacity={0.85}
+          accessibilityRole="button"
         >
           <Text style={styles.emptyButtonLabel}>Report a Bathroom</Text>
         </TouchableOpacity>
@@ -244,6 +247,7 @@ export default function FinderScreen() {
           key={`${bathroom.id}-${index === selectedIndex}`}
           coordinate={{ latitude: bathroom.latitude, longitude: bathroom.longitude }}
           tracksViewChanges={false}
+          accessibilityLabel={`${bathroom.name}${bathroom.distanceMiles !== undefined ? `, ${bathroom.distanceMiles} miles away` : ''}`}
           onPress={() => {
             if (index === selectedIndex) return;
             setSelectedIndex(index);
@@ -430,7 +434,7 @@ const styles = StyleSheet.create({
   emptyButton: {
     backgroundColor: colors.accent,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignSelf: 'stretch',
     alignItems: 'center',
   },

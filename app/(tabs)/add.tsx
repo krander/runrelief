@@ -115,7 +115,7 @@ export default function AddScreen() {
           <Text style={styles.successSubtitle}>
             Your bathroom has been added to the map.
           </Text>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackToMap} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToMap} activeOpacity={0.85} accessibilityRole="button">
             <Text style={styles.backButtonLabel}>Back to Map</Text>
           </TouchableOpacity>
         </View>
@@ -175,6 +175,9 @@ export default function AddScreen() {
                 style={styles.typeOption}
                 onPress={() => setSelectedType(type)}
                 activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: selectedType === type }}
+                accessibilityLabel={type === 'porta-potty' ? 'Porta-Potty' : 'Restroom'}
               >
                 <Text style={styles.typeOptionLabel}>
                   {type === 'porta-potty' ? 'Porta-Potty' : 'Restroom'}
@@ -192,7 +195,7 @@ export default function AddScreen() {
           <Text style={styles.noLocationMessage}>Waiting for your location…</Text>
         )}
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.85} accessibilityRole="button">
           <Text style={styles.submitLabel}>Submit</Text>
         </TouchableOpacity>
       </ScrollView>

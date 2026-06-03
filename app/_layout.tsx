@@ -58,7 +58,7 @@ export default function RootLayout() {
           RunRelief needs your location to find nearby bathrooms. Please enable
           location access in Settings.
         </Text>
-        <TouchableOpacity style={styles.button} onPress={() => Linking.openSettings()} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.button} onPress={() => Linking.openSettings()} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Open iOS Settings to enable location access">
           <Text style={styles.buttonText}>Open Settings</Text>
         </TouchableOpacity>
       </View>

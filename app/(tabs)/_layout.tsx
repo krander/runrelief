@@ -50,6 +50,7 @@ function CustomTabBar({ state, descriptors, navigation, insets }: TabBarProps) {
           <Animated.View
             style={[styles.pill, { left: pillX, width: pillWidth }]}
             pointerEvents="none"
+            importantForAccessibility="no"
           />
         )}
         {state.routes.map((route, index) => {
@@ -82,9 +83,9 @@ function CustomTabBar({ state, descriptors, navigation, insets }: TabBarProps) {
               onLayout={onTabLayout(index)}
               style={styles.tabItem}
               activeOpacity={0.75}
-              accessibilityRole="button"
+              accessibilityRole="tab"
               accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
             >
               <View style={styles.tabContent}>
                 {icon}

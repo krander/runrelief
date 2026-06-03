@@ -40,7 +40,11 @@ export default function PaginationDots({ total, activeIndex }: Props) {
   const count = Math.min(total, 5);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel={`Bathroom ${activeIndex + 1} of ${total}`}
+    >
       {Array.from({ length: count }, (_, i) => (
         <Dot key={i} isActive={i === activeIndex} />
       ))}
