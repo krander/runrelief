@@ -1,9 +1,10 @@
 export const colors = {
   // Backgrounds
-  bg:      '#0A0A0A',
-  surface: '#1A1F2E',
-  cardBg:  '#12172A',
-  overlay: 'rgba(0,0,0,0.85)',
+  bg:       '#0A0A0A',
+  splashBg: '#191F2F',
+  surface:  '#1A1F2E',
+  cardBg:   '#12172A',
+  overlay:  'rgba(0,0,0,0.85)',
 
   // Map pins
   pinActive:   '#1B2A4A',

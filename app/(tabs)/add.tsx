@@ -1,10 +1,10 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useLocation } from '../../hooks/useLocation';
 import supabase from '../../lib/supabase';
@@ -70,6 +70,17 @@ export default function AddScreen() {
       longitudeDelta: 0.005,
     });
   }, [location, mapRegion]);
+
+  // Reset form when the user navigates away so they always see a clean state on return.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setSubmitted(false);
+        setSelectedType('porta-potty');
+        setNoLocation(false);
+      };
+    }, []),
+  );
 
   const handleSubmit = () => {
     if (!location) {

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Animated, Easing, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '../lib/theme';
 
@@ -35,11 +34,10 @@ export default function LoadingScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <MaterialCommunityIcons
-        name="human-male-female"
-        size={48}
-        color={colors.accent}
+      <Image
+        source={require('../assets/icon.png')}
         style={styles.icon}
+        resizeMode="contain"
       />
       <View style={styles.wordmarkRow}>
         <Text style={styles.wordmarkRun}>Run</Text>
@@ -58,11 +56,13 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.splashBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   icon: {
+    width: 180,
+    height: 180,
     marginBottom: 16,
   },
   wordmarkRow: {
