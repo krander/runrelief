@@ -19,9 +19,16 @@ export default function BathroomCard({ bathroom, onReport, reportState }: Props)
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-          {bathroom.name}
-        </Text>
+        <View style={styles.nameBlock}>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+            {bathroom.name}
+          </Text>
+          {bathroom.address && (
+            <Text style={styles.address} numberOfLines={1} ellipsizeMode="tail">
+              {bathroom.address}
+            </Text>
+          )}
+        </View>
         <Text style={styles.distance}>{bathroom.distanceMiles} mi</Text>
       </View>
       <View style={styles.statusRow}>
@@ -64,11 +71,18 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 6,
   },
-  name: {
+  nameBlock: {
     flex: 1,
+  },
+  name: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.white,
+  },
+  address: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 2,
   },
   distance: {
     fontSize: 16,

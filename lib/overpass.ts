@@ -5,6 +5,7 @@ const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 export type Bathroom = {
   id: string;
   name: string;
+  address?: string;
   latitude: number;
   longitude: number;
   openingHours: string | null;
@@ -13,12 +14,32 @@ export type Bathroom = {
   distanceMiles?: number;
 };
 
+// Tags consumed from OSM: name, operator, addr:housenumber, addr:street, addr:full,
+// opening_hours, access, fee.  All are returned by `out body;` without query changes.
 export function parseBathroomsFromOSM(elements: OverpassNode[]): Bathroom[] {
   return elements.map((node) => {
-    const openingHours = node.tags?.opening_hours ?? null;
+    const tags = node.tags ?? {};
+    const openingHours = tags.opening_hours ?? null;
+
+    // Name fallback chain: name → operator → house+street → addr:full → default
+    const houseStreet =
+      tags['addr:housenumber'] && tags['addr:street']
+        ? `${tags['addr:housenumber']} ${tags['addr:street']}`
+        : null;
+    const name =
+      tags.name ??
+      tags.operator ??
+      houseStreet ??
+      tags['addr:full'] ??
+      'Public Restroom';
+
+    // Street address stored separately so it can be shown as a subtitle
+    const address = houseStreet ?? tags['addr:full'] ?? undefined;
+
     return {
       id: String(node.id),
-      name: node.tags?.name ?? 'Public Restroom',
+      name,
+      address,
       latitude: node.lat,
       longitude: node.lon,
       openingHours,
