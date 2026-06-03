@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
-import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { colors } from '../lib/theme';
+import { useLocation } from '../hooks/useLocation';
+import LoadingScreen from '../components/LoadingScreen';
 
 type PermissionStatus = 'loading' | 'granted' | 'denied';
 
@@ -15,6 +17,11 @@ async function checkPermission(): Promise<PermissionStatus> {
 
 export default function RootLayout() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('loading');
+  const [timedOut, setTimedOut] = useState(false);
+  const [showLoading, setShowLoading] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const { location } = useLocation(permissionStatus === 'granted');
 
   // Initial permission request on mount.
   useEffect(() => {
@@ -29,8 +36,7 @@ export default function RootLayout() {
     })();
   }, []);
 
-  // Re-check when the app returns to the foreground — recovers automatically
-  // if the user granted permission in iOS Settings and switched back.
+  // Re-check when the app returns to foreground — recovers if user granted permission in Settings.
   useEffect(() => {
     if (permissionStatus !== 'denied') return;
 
@@ -44,28 +50,74 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [permissionStatus]);
 
-  if (permissionStatus === 'loading') {
-    return <View style={styles.screen}><StatusBar style="light" /></View>;
-  }
+  // 5-second safety net — if permission check is still pending, fall back to denied.
+  // If permission is granted but GPS hasn't arrived, proceed anyway.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+      setPermissionStatus((prev) => (prev === 'loading' ? 'denied' : prev));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (permissionStatus === 'denied') {
-    return (
-      <View style={styles.screen}>
-        <StatusBar style="light" />
-        <MaterialCommunityIcons name="map-marker-off" size={56} color={colors.accent} style={styles.icon} />
-        <Text style={styles.title}>Location Required</Text>
-        <Text style={styles.message}>
-          RunRelief needs your location to find nearby bathrooms. Please enable
-          location access in Settings.
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={() => Linking.openSettings()} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Open iOS Settings to enable location access">
-          <Text style={styles.buttonText}>Open Settings</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const isReady =
+    permissionStatus === 'denied' ||
+    (permissionStatus === 'granted' && (location !== null || timedOut));
 
-  return <Slot />;
+  // Fade out the loading overlay once the app is ready.
+  useEffect(() => {
+    if (!isReady || !showLoading) return;
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setShowLoading(false);
+    });
+  }, [isReady, fadeAnim]);
+
+  return (
+    <>
+      {permissionStatus !== 'loading' && (
+        permissionStatus === 'denied' ? (
+          <View style={styles.screen}>
+            <StatusBar style="light" />
+            <MaterialCommunityIcons
+              name="map-marker-off"
+              size={56}
+              color={colors.accent}
+              style={styles.icon}
+            />
+            <Text style={styles.title}>Location Required</Text>
+            <Text style={styles.message}>
+              RunRelief needs your location to find nearby bathrooms. Please enable
+              location access in Settings.
+            </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => Linking.openSettings()}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Open iOS Settings to enable location access"
+            >
+              <Text style={styles.buttonText}>Open Settings</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <Slot />
+        )
+      )}
+
+      {showLoading && (
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}
+          pointerEvents={isReady ? 'none' : 'auto'}
+        >
+          <LoadingScreen />
+        </Animated.View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
