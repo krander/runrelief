@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { colors } from '../lib/theme';
-import { useLocation } from '../hooks/useLocation';
+import { AppReadyContext } from '../lib/appReady';
 import LoadingScreen from '../components/LoadingScreen';
 
 type PermissionStatus = 'loading' | 'granted' | 'denied';
@@ -17,11 +17,10 @@ async function checkPermission(): Promise<PermissionStatus> {
 
 export default function RootLayout() {
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('loading');
+  const [bathroomsReady, setBathroomsReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [showLoading, setShowLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  const { location } = useLocation(permissionStatus === 'granted');
 
   // Initial permission request on mount.
   useEffect(() => {
@@ -50,8 +49,8 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [permissionStatus]);
 
-  // 5-second safety net — if permission check is still pending, fall back to denied.
-  // If permission is granted but GPS hasn't arrived, proceed anyway.
+  // 5-second safety net: if permission is still pending, fall back to denied.
+  // If permission is granted but bathrooms haven't loaded, proceed anyway.
   useEffect(() => {
     const timer = setTimeout(() => {
       setTimedOut(true);
@@ -60,11 +59,13 @@ export default function RootLayout() {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleBathroomsReady = useCallback(() => setBathroomsReady(true), []);
+
   const isReady =
     permissionStatus === 'denied' ||
-    (permissionStatus === 'granted' && (location !== null || timedOut));
+    (permissionStatus === 'granted' && (bathroomsReady || timedOut));
 
-  // Fade out the loading overlay once the app is ready.
+  // Fade out the loading overlay once everything is ready.
   useEffect(() => {
     if (!isReady || !showLoading) return;
     Animated.timing(fadeAnim, {
@@ -104,7 +105,9 @@ export default function RootLayout() {
             </TouchableOpacity>
           </View>
         ) : (
-          <Slot />
+          <AppReadyContext.Provider value={{ onBathroomsReady: handleBathroomsReady }}>
+            <Slot />
+          </AppReadyContext.Provider>
         )
       )}
 

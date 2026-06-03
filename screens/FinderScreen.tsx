@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, PanResponder, Pressable, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated, PanResponder, Pressable, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,6 +12,7 @@ import PaginationDots from '../components/PaginationDots';
 import TakeMeThereButton from '../components/TakeMeThereButton';
 import { colors } from '../lib/theme';
 import supabase from '../lib/supabase';
+import { useAppReady } from '../lib/appReady';
 
 // Approximate height of the bottom sheet (card + pagination + tab bar).
 // Used as mapPadding so Apple Maps centers the camera in the visible area above the sheet.
@@ -134,6 +135,19 @@ export default function FinderScreen() {
   const longitude = location?.coords.longitude ?? null;
 
   const { bathrooms, loading, isOffline, refresh } = useBathrooms(latitude, longitude);
+
+  // Signal the root layout once the first bathroom fetch cycle completes.
+  const { onBathroomsReady } = useAppReady();
+  const hasBeenLoadingRef = useRef(false);
+  const readySignaledRef  = useRef(false);
+  useEffect(() => {
+    if (loading) {
+      hasBeenLoadingRef.current = true;
+    } else if (hasBeenLoadingRef.current && !readySignaledRef.current) {
+      readySignaledRef.current = true;
+      onBathroomsReady();
+    }
+  }, [loading, onBathroomsReady]);
 
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth - 32;
@@ -333,12 +347,6 @@ export default function FinderScreen() {
         {markers}
       </MapView>
 
-      {loading && (
-        <View style={styles.loadingCenter} pointerEvents="none">
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      )}
-
       <LocateMeButton onPress={handleLocateMe} isOffline={isOffline} />
       {isOffline && <OfflineBanner />}
       {!loading && bathrooms.length === 0 && <EmptyState isOffline={isOffline} />}
@@ -391,15 +399,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
     paddingBottom: 8,
-  },
-  loadingCenter: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptySheet: {
     position: 'absolute',
