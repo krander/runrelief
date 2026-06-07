@@ -15,7 +15,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.krander.runrelief",
-      "buildNumber": "1"
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
