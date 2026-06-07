@@ -17,36 +17,41 @@ export type Bathroom = {
 // Tags consumed from OSM: name, operator, addr:housenumber, addr:street, addr:full,
 // opening_hours, access, fee.  All are returned by `out body;` without query changes.
 export function parseBathroomsFromOSM(elements: OverpassNode[]): Bathroom[] {
-  return elements.map((node) => {
-    const tags = node.tags ?? {};
-    const openingHours = tags.opening_hours ?? null;
+  return elements
+    .filter((node) => {
+      const tags = node.tags ?? {};
+      return tags.access !== 'private' && tags.access !== 'no' && tags.foot !== 'no';
+    })
+    .map((node) => {
+      const tags = node.tags ?? {};
+      const openingHours = tags.opening_hours ?? null;
 
-    // Name fallback chain: name → operator → house+street → addr:full → default
-    const houseStreet =
-      tags['addr:housenumber'] && tags['addr:street']
-        ? `${tags['addr:housenumber']} ${tags['addr:street']}`
-        : null;
-    const name =
-      tags.name ??
-      tags.operator ??
-      houseStreet ??
-      tags['addr:full'] ??
-      'Public Restroom';
+      // Name fallback chain: name → operator → house+street → addr:full → default
+      const houseStreet =
+        tags['addr:housenumber'] && tags['addr:street']
+          ? `${tags['addr:housenumber']} ${tags['addr:street']}`
+          : null;
+      const name =
+        tags.name ??
+        tags.operator ??
+        houseStreet ??
+        tags['addr:full'] ??
+        'Public Restroom';
 
-    // Street address stored separately so it can be shown as a subtitle
-    const address = houseStreet ?? tags['addr:full'] ?? undefined;
+      // Street address stored separately so it can be shown as a subtitle
+      const address = houseStreet ?? tags['addr:full'] ?? undefined;
 
-    return {
-      id: String(node.id),
-      name,
-      address,
-      latitude: node.lat,
-      longitude: node.lon,
-      openingHours,
-      isOpen: openingHours !== null ? parseIsOpen(openingHours) : null,
-      source: 'osm',
-    };
-  });
+      return {
+        id: String(node.id),
+        name,
+        address,
+        latitude: node.lat,
+        longitude: node.lon,
+        openingHours,
+        isOpen: openingHours !== null ? parseIsOpen(openingHours) : null,
+        source: 'osm',
+      };
+    });
 }
 
 export type OverpassNode = {
@@ -70,7 +75,7 @@ export async function fetchBathroomsFromOSM(
 ): Promise<OverpassResponse> {
   const query = [
     '[out:json][timeout:25];',
-    `node[amenity=toilets](around:${radiusInMeters},${latitude},${longitude});`,
+    `node[amenity=toilets][access!=private][access!=no][foot!=no](around:${radiusInMeters},${latitude},${longitude});`,
     'out body;',
   ].join('\n');
 
