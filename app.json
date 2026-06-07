@@ -16,7 +16,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.krander.runrelief",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["maps"]
       }
     },
     "android": {
