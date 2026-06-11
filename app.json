@@ -33,7 +33,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "RunRelief uses your location to find public bathrooms near your running route and show how far away they are."
+        }
+      ]
     ],
     "extra": {
       "router": {},
