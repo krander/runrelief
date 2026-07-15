@@ -28,6 +28,7 @@ export async function fetchCommunityPins(
       .from('community_pins')
       .select('id, latitude, longitude, type, expires_at, is_flagged')
       .eq('is_flagged', false)
+      .eq('is_heartbeat', false)
       .or(`expires_at.is.null,expires_at.gt.${now}`);
 
     if (error) {
