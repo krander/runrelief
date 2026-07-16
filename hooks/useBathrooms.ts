@@ -107,20 +107,63 @@ export function useBathrooms(
       setError(null);
 
       try {
-        let osmBathrooms: Bathroom[];
+        // Fetch OSM and community pins independently so a failure in one
+        // never discards or blocks results already fetched from the other.
+        const osmPromise: Promise<Bathroom[]> = coordsChanged
+          ? fetchBathroomsFromOSM(latitude, longitude).then((osmResponse) => {
+              const parsed = parseBathroomsFromOSM(osmResponse.elements);
+              osmCacheRef.current = parsed;
+              osmCoordsRef.current = { lat: latitude, lon: longitude };
+              return parsed;
+            })
+          : Promise.resolve(osmCacheRef.current);
 
-        if (coordsChanged) {
-          const osmResponse = await fetchBathroomsFromOSM(latitude, longitude);
-          osmBathrooms = parseBathroomsFromOSM(osmResponse.elements);
-          osmCacheRef.current = osmBathrooms;
-          osmCoordsRef.current = { lat: latitude, lon: longitude };
-        } else {
-          osmBathrooms = osmCacheRef.current;
-        }
-
-        const communityPins = await fetchCommunityPins(latitude, longitude);
+        const [osmSettled, communitySettled] = await Promise.allSettled([
+          osmPromise,
+          fetchCommunityPins(latitude, longitude),
+        ]);
 
         if (cancelled) return;
+
+        const osmFailed = osmSettled.status === 'rejected';
+        const communityFailed = communitySettled.status === 'rejected';
+
+        if (osmFailed && communityFailed) {
+          // Check connectivity to distinguish network failures from API errors.
+          const netState = await NetInfo.fetch();
+          const offline = !netState.isConnected;
+
+          setIsOffline(offline);
+
+          if (offline && resultsCacheRef.current.length > 0) {
+            // Serve cached results while offline.
+            setBathrooms(resultsCacheRef.current);
+          } else {
+            const err = osmSettled.reason;
+            setError(err instanceof Error ? err.message : 'Failed to load bathrooms');
+            if (coordsChanged) setBathrooms([]);
+          }
+          return;
+        }
+
+        if (osmFailed) {
+          const reason = osmSettled.reason;
+          console.warn(
+            '[useBathrooms] OSM fetch failed, falling back to cached OSM results:',
+            reason instanceof Error ? reason.message : String(reason),
+          );
+        }
+        if (communityFailed) {
+          const reason = communitySettled.reason;
+          console.warn(
+            '[useBathrooms] community pins fetch failed, proceeding with OSM results only:',
+            reason instanceof Error ? reason.message : String(reason),
+          );
+        }
+
+        // Fall back to the last successful OSM cache rather than an empty set.
+        const osmBathrooms = osmFailed ? osmCacheRef.current : osmSettled.value;
+        const communityPins = communityFailed ? [] : communitySettled.value;
 
         const merged = deduplicateBathrooms(osmBathrooms, communityPins);
         const sorted = sortBathroomsByDistance(merged, latitude, longitude);
@@ -132,22 +175,6 @@ export function useBathrooms(
         resultsCacheRef.current = results;
         setIsOffline(false);
         setBathrooms(results);
-      } catch (err) {
-        if (cancelled) return;
-
-        // Check connectivity to distinguish network failures from API errors.
-        const netState = await NetInfo.fetch();
-        const offline = !netState.isConnected;
-
-        setIsOffline(offline);
-
-        if (offline && resultsCacheRef.current.length > 0) {
-          // Serve cached results while offline.
-          setBathrooms(resultsCacheRef.current);
-        } else {
-          setError(err instanceof Error ? err.message : 'Failed to load bathrooms');
-          if (coordsChanged) setBathrooms([]);
-        }
       } finally {
         if (!cancelled) setLoading(false);
       }
